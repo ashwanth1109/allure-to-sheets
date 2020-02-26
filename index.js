@@ -1,5 +1,20 @@
 const FileUtilities = require("./FileUtilities");
 
+const generateImpactReport = data => {
+  const defects = {};
+  const failed = data.filter(item => item.status === "failed");
+  data.map(item => {
+    item.defects.forEach(defect => {
+      if (defects[defect] === undefined) {
+        defects[defect] = 1;
+      } else {
+        defects[defect] = defects[defect] + 1;
+      }
+    });
+  });
+  return Object.keys(defects).map(defect => [defect, defects[defect]]);
+};
+
 const main = async () => {
   const bufferArray = await FileUtilities.getAllTestCases();
 
@@ -21,12 +36,17 @@ const main = async () => {
   let message = await FileUtilities.writeToOutputFile(output);
   console.log(message);
 
+  const defects = generateImpactReport(output);
+  const sortedDefects = defects.sort((a, b) => b[1] - a[1]);
+
   const appScript = `
   function writeToSheet() {
     const input = ${JSON.stringify(output)};
+    const defects = ${JSON.stringify(sortedDefects)};
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet1 = ss.getSheetByName('Raw data')
+    const sheet2 = ss.getSheetByName('Impact study');
 
     for (let i = 0; i < input.length; i++) {
       const keys = ['jiraTag','name','status'];
@@ -36,6 +56,12 @@ const main = async () => {
       }
       const defects = row['defects'].join(', ');
       sheet1.getRange(i+2, 4).setValue(defects);
+    }
+    
+    for (let i = 0; i < defects.length; i++) {
+      const row = defects[i];
+      sheet2.getRange(i+2, 1).setValue(row[0]);
+      sheet2.getRange(i+2, 2).setValue(row[1]);
     }
   }
   `;
