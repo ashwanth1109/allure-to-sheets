@@ -60,7 +60,8 @@ const main = async () => {
     
     for (let i = 0; i < defects.length; i++) {
       const row = defects[i];
-      sheet2.getRange(i+2, 1).setValue(row[0]);
+      const link = "https://jira.devfactory.com/browse/" + row[0].split('@Defect-')[1];
+      sheet2.getRange(i + 2, 1).setFormula('=HYPERLINK("' + link + '","' + row[0] + '")');
       sheet2.getRange(i+2, 2).setValue(row[1]);
     }
   }
